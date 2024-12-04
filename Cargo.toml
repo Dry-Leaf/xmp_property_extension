@@ -1,0 +1,16 @@
+[package]
+name = "xmp_property_extension"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+windows-core = "0.58"
+
+[dependencies.windows]
+version = "0.58"
+features = [
+  "implement",
+  "Win32_System_Com",
+  "Win32_UI_Shell",
+  "Win32_UI_Shell_PropertiesSystem",
+]
