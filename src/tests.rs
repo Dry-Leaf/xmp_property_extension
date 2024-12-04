@@ -1,7 +1,7 @@
 #[cfg(test)]
 use super::*;
-use std::cell::RefCell;
-use windows::Win32::{UI::Shell::SHCreateStreamOnFileEx, Foundation::*};
+use windows::Win32::Foundation::*;
+use windows::Win32::UI::Shell::{SHCreateStreamOnFileEx,PropertiesSystem::IPropertyStore};
 
 #[test]
 #[allow(non_snake_case, unused_variables)]
@@ -18,9 +18,14 @@ fn init_test() -> Result<()> {
         &SHCreateStreamOnFileEx(pszFile,0,0,BOOL(0),None)?
     };
 
-    let ph: IInitializeWithStream = PropertyHandler{file_name: RefCell::new(String::new()),}.into();
+    let ph: IInitializeWithStream = PropertyHandler.into();
+    unsafe {ph.Initialize(Some(stream),0)?;}
 
-    unsafe {ph.Initialize(Some(stream),0);}
+    let store: IPropertyStore = ph.cast()?;
 
+    unsafe {
+        println!("{:?}", store.GetCount());
+    }
+    
     Ok(())
 }

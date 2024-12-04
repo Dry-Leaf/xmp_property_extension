@@ -1,10 +1,23 @@
-use std::cell::RefCell;
-use windows::{core::*, Win32::System::Com::*, Win32::UI::Shell::PropertiesSystem::*};
+//use std::cell::RefCell;
+use regex::Regex;
+use std::sync::LazyLock;
 
-#[implement(IInitializeWithStream)] //,IPropertyStore)]
-pub struct PropertyHandler {
-    file_name: RefCell<String>
+use windows::{core::*};
+use windows::Win32::{System::Com::*, UI::Shell::PropertiesSystem::*};
+
+
+#[implement(IInitializeWithStream,IPropertyStore)]
+pub struct PropertyHandler;
+
+
+static EXTENSION_REGEX: LazyLock<Regex> = 
+    LazyLock::new(|| Regex::new(r#"\.[^\.]*+$"#).unwrap());
+
+fn get_file_type(file_name: &str) -> &str {
+    let ext = EXTENSION_REGEX.find(file_name).unwrap();
+    ext.as_str()
 }
+
 
 #[allow(non_snake_case, unused_variables)]
 impl IInitializeWithStream_Impl for PropertyHandler_Impl {
@@ -12,26 +25,25 @@ impl IInitializeWithStream_Impl for PropertyHandler_Impl {
         let pstatstg: &mut STATSTG = &mut Default::default();
         let grfStatFlag = STATFLAG(0);
 
-        unsafe {
+        let ext = unsafe {
             pstream.unwrap().Stat(pstatstg, grfStatFlag)?;
-            let file_name = pstatstg.pwcsName.to_string();
+            let file_name = pstatstg.pwcsName.to_string()?;
         
-            *self.file_name.borrow_mut() = file_name?.to_owned();
-        }
+            println!("{}", file_name.clone());
+            
+            get_file_type(&file_name).to_owned()
+        };
 
-        println!("{}", self.file_name.borrow());
+        println!("{}", ext);
          
         Ok(())
     }
 }
 
-#[cfg(test)]
-mod tests;
-
-/*
-impl IPropertyStore_Impl for PropertyHandler {
+#[allow(non_snake_case, unused_variables)]
+impl IPropertyStore_Impl for PropertyHandler_Impl {
     fn GetCount(&self) -> Result<u32> {
-        
+        Ok(1 as u32)
     }
 
     fn GetAt(&self, iprop: u32, pkey: *mut PROPERTYKEY) -> Result<()> {
@@ -39,7 +51,7 @@ impl IPropertyStore_Impl for PropertyHandler {
     }
 
     fn GetValue(&self, key: *const PROPERTYKEY) -> Result<PROPVARIANT> {
-        
+        Ok(PROPVARIANT::default())
     }
 
     fn SetValue(
@@ -55,4 +67,6 @@ impl IPropertyStore_Impl for PropertyHandler {
         Ok(())
     }
 }
-*/
+
+#[cfg(test)]
+mod tests;
