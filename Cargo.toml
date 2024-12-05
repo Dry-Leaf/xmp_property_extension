@@ -11,6 +11,7 @@ regex = "1.11.1"
 version = "0.58"
 features = [
   "implement",
+  "Win32_System_Registry",
   "Win32_System_Com",
   "Win32_UI_Shell",
   "Win32_UI_Shell_PropertiesSystem",

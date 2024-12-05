@@ -18,13 +18,20 @@ fn init_test() -> Result<()> {
         &SHCreateStreamOnFileEx(pszFile,0,0,BOOL(0),None)?
     };
 
-    let ph: IInitializeWithStream = PropertyHandler.into();
+    let ph: IInitializeWithStream = PropertyHandler{orig_ps: RefCell::new(None)}.into();
     unsafe {ph.Initialize(Some(stream),0)?;}
 
     let store: IPropertyStore = ph.cast()?;
 
     unsafe {
         println!("{:?}", store.GetCount());
+
+        let mut pk = PROPERTYKEY::default();
+        store.GetAt(0 as u32, &mut pk);        
+        println!("{:?}", pk);
+
+        let val = store.GetValue(&pk as *const PROPERTYKEY);
+        println!("{:?}", val);
     }
     
     Ok(())
