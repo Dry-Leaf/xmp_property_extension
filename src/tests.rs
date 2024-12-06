@@ -17,12 +17,11 @@ fn init_test() -> Result<()> {
         &SHCreateStreamOnFileEx(pszFile, 0, 0, BOOL(0), None)?
     };
 
+    let cf: IClassFactory = ClassFactory.into();
+    unsafe { cf.CreateInstance::<Option<&IUnknown>, IInitializeWithStream>(None)? };
+
     let dummy_ph: PropertyHandler = Default::default();
     let ph_iu: IUnknown = dummy_ph.into();
-
-    let cf: IClassFactory = ClassFactory.into();
-
-    unsafe { cf.CreateInstance::<Option<&IUnknown>, IInitializeWithStream>(Some(&ph_iu))? };
 
     let ph: IInitializeWithStream = ph_iu.cast()?;
 
@@ -32,20 +31,20 @@ fn init_test() -> Result<()> {
     let mut pk = PROPERTYKEY::default();
 
     unsafe {
-        println!("{:?}", store.GetCount());
+        println!("GetCount - {:?}", store.GetCount());
 
         store.GetAt(0 as u32, &mut pk);
-        println!("{:?}", pk);
+        println!("GetAt - {:?}", pk);
 
         let val = store.GetValue(&pk as *const PROPERTYKEY);
-        println!("{:?}", val);
+        println!("GetValue - {:?}", val);
     }
 
     let caps: IPropertyStoreCapabilities = ph.cast()?;
 
     unsafe {
         println!(
-            "Writable test - {:?}",
+            "IsPropertyWritable - {:?}",
             caps.IsPropertyWritable(&pk as *const PROPERTYKEY)
         );
     }

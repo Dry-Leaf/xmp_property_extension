@@ -29,7 +29,7 @@ impl IClassFactory_Impl for ClassFactory_Impl {
             if *riid == IInitializeWithStream::IID {
                 let unknown: property_handler::PropertyHandler = Default::default();
                 let ph: IInitializeWithStream = unknown.into();
-                ph.query(riid,ppvobject).ok()
+                ph.query(riid, ppvobject).ok()
             } else {
                 E_NOINTERFACE.ok()
             }

@@ -97,7 +97,6 @@ impl IPropertyStore_Impl for PropertyHandler_Impl {
         let binding = self.orig_ps.borrow();
         let ps = binding.as_ref().unwrap();
         unsafe { ps.GetCount() }
-        //Ok(64)
     }
 
     fn GetAt(&self, iprop: u32, pkey: *mut PROPERTYKEY) -> Result<()> {
