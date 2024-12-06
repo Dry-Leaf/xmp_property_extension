@@ -43,7 +43,7 @@ impl IInitializeWithStream_Impl for PropertyHandler_Impl {
         };
 
 
-        //Getting IPropertyStore using the file type's original handler
+        //Getting  the file type's original property handler
         let mut orig_key = String::with_capacity(85);
         orig_key.push_str(r#"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\PropertySystem\\PropertyHandlers\\"#);
         orig_key.push_str(&ext);
@@ -64,12 +64,13 @@ impl IInitializeWithStream_Impl for PropertyHandler_Impl {
             
             RegCloseKey(phkResult).ok()?;
             let orig_clsid: GUID = CLSIDFromString(PWSTR::from_raw(buffer.as_mut_ptr()))?;
-            
+
+            //Initializing and retrieving interfaces            
             let orig_init: IInitializeWithStream = CoCreateInstance(&orig_clsid,None,CLSCTX_ALL)?;
             orig_init.Initialize(pstream,0x00000002)?;
             orig_init.cast()?
         };
-        
+
         let orig_ps_cap: IPropertyStoreCapabilities = orig_ps.cast()?;
         *self.orig_ps.borrow_mut() = Some(orig_ps);
         *self.orig_ps_cap.borrow_mut() = Some(orig_ps_cap);
