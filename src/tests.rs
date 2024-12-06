@@ -1,7 +1,8 @@
 #[cfg(test)]
 use super::*;
+use crate::property_handler::PropertyHandler;
 use windows::Win32::Foundation::*;
-use windows::Win32::UI::Shell::{SHCreateStreamOnFileEx,PropertiesSystem::IPropertyStore};
+use windows::Win32::UI::Shell::{SHCreateStreamOnFileEx,PropertiesSystem::*};
 
 #[test]
 #[allow(non_snake_case, unused_variables)]
@@ -15,11 +16,8 @@ fn init_test() -> Result<()> {
         &SHCreateStreamOnFileEx(pszFile,0,0,BOOL(0),None)?
     };
 
-    let ipf: IPersistFile = stream.cast()?;
-    let fpath = unsafe{ipf.GetCurFile()?.to_string()?};
-    println!("{}", fpath);
-
-    let ph: IInitializeWithStream = PropertyHandler{orig_ps: Default::default()}.into();
+    let dummy_ph: PropertyHandler = Default::default();
+    let ph: IInitializeWithStream = dummy_ph.into();
     unsafe {ph.Initialize(Some(stream),0)?;}
 
     let store: IPropertyStore = ph.cast()?;
@@ -34,6 +32,6 @@ fn init_test() -> Result<()> {
         let val = store.GetValue(&pk as *const PROPERTYKEY);
         println!("{:?}", val);
     }
-    
+
     Ok(())
 }
