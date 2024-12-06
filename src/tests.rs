@@ -22,15 +22,22 @@ fn init_test() -> Result<()> {
 
     let store: IPropertyStore = ph.cast()?;
 
+    let mut pk = PROPERTYKEY::default();
+    
     unsafe {
         println!("{:?}", store.GetCount());
-
-        let mut pk = PROPERTYKEY::default();
+        
         store.GetAt(0 as u32, &mut pk);        
         println!("{:?}", pk);
 
         let val = store.GetValue(&pk as *const PROPERTYKEY);
         println!("{:?}", val);
+    }
+
+    let caps: IPropertyStoreCapabilities = ph.cast()?;
+    
+    unsafe {
+        println!("Writable test - {:?}", caps.IsPropertyWritable(&pk as *const PROPERTYKEY));
     }
 
     Ok(())

@@ -54,6 +54,7 @@ impl IInitializeWithStream_Impl for PropertyHandler_Impl {
         let mut phkResult: HKEY = Default::default();
         
         let orig_ps: IPropertyStore = unsafe {
+            //Getting GUID of original property handler
             RegOpenKeyExW(HKEY_LOCAL_MACHINE,lpSubKey,0,KEY_QUERY_VALUE,&mut phkResult).ok()?;
 
             let mut buffer = [0u16; 64];
@@ -68,11 +69,10 @@ impl IInitializeWithStream_Impl for PropertyHandler_Impl {
             orig_init.Initialize(pstream,0x00000002)?;
             orig_init.cast()?
         };
-
-        //let orig_ps_cap: IPropertyStoreCapabilities = orig_ps.cast()  
-        *self.orig_ps.borrow_mut() = Some(orig_ps);
-        //*self.orig_ps_cap.borrow_mut() = Some(orig_ps_cap);
         
+        let orig_ps_cap: IPropertyStoreCapabilities = orig_ps.cast()?;
+        *self.orig_ps.borrow_mut() = Some(orig_ps);
+        *self.orig_ps_cap.borrow_mut() = Some(orig_ps_cap);
      
         Ok(())
     }
@@ -114,8 +114,9 @@ impl IPropertyStore_Impl for PropertyHandler_Impl {
 
 #[allow(non_snake_case, unused_variables)]
 impl IPropertyStoreCapabilities_Impl for PropertyHandler_Impl {
-    fn IsPropertyWritable(&self, _key: *const PROPERTYKEY) -> windows::core::Result<()> {
-
-        Ok(())
+    fn IsPropertyWritable(&self, key: *const PROPERTYKEY) -> windows::core::Result<()> {
+        let binding = self.orig_ps_cap.borrow();
+        let ps_cap = binding.as_ref().unwrap();
+        unsafe {ps_cap.IsPropertyWritable(key)}
     }
 }
