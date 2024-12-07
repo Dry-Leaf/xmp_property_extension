@@ -3,10 +3,13 @@ use std::cell::RefCell;
 use std::ffi::c_void;
 use std::sync::LazyLock;
 
-use windows::Win32::UI::Shell::PropertiesSystem::*;
+use xmp_toolkit::XmpFile;
+
+use windows::Win32::Foundation::*;
+use windows::Win32::UI::Shell::{PropertiesSystem::*, SHCreateStreamOnFileEx};
 use windows::{core::*, Win32::System::Com::*, Win32::System::Registry::*};
 
-#[implement(IInitializeWithStream, IPropertyStore, IPropertyStoreCapabilities)]
+#[implement(IInitializeWithFile, IPropertyStore, IPropertyStoreCapabilities)]
 #[derive(Default)]
 pub struct PropertyHandler {
     pub orig_ps: RefCell<Option<IPropertyStore>>,
@@ -15,28 +18,20 @@ pub struct PropertyHandler {
 
 static EXTENSION_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r#"\.[^\.]*+$"#).unwrap());
 
-fn get_file_type(file_name: &str) -> &str {
-    let ext = EXTENSION_REGEX.find(file_name).unwrap();
+fn get_file_type(file_path: &str) -> &str {
+    let ext = EXTENSION_REGEX.find(file_path).unwrap();
     ext.as_str()
 }
 
-#[allow(non_snake_case, unused_variables)]
-impl IInitializeWithStream_Impl for PropertyHandler_Impl {
-    fn Initialize(&self, pstream: Option<&IStream>, grfmode: u32) -> Result<()> {
+#[allow(non_snake_case)]
+impl IInitializeWithFile_Impl for PropertyHandler_Impl {
+    fn Initialize(&self, pszfilepath: &PCWSTR, _grfmode: u32) -> Result<()> {
         //makes sure COM runtime is initialized
         let _ = unsafe { CoIncrementMTAUsage() };
 
         //Identifying file type
-        let pstatstg: &mut STATSTG = &mut Default::default();
-        let grfStatFlag = STATFLAG(0);
-
-        let pstream = pstream.unwrap();
-        let ext = unsafe {
-            pstream.Stat(pstatstg, grfStatFlag)?;
-            let file_name = pstatstg.pwcsName.to_string()?;
-
-            get_file_type(&file_name).to_owned()
-        };
+        let file_path = unsafe { pszfilepath.to_string()? };
+        let ext = get_file_type(&file_path).to_owned();
 
         //Getting  the file type's original property handler
         let mut orig_key = String::with_capacity(85);
@@ -79,6 +74,8 @@ impl IInitializeWithStream_Impl for PropertyHandler_Impl {
 
             //Initializing and retrieving interfaces
             let orig_init: IInitializeWithStream = CoCreateInstance(&orig_clsid, None, CLSCTX_ALL)?;
+            let pstream = &SHCreateStreamOnFileEx(*pszfilepath, 0, 0, BOOL(0), None)?;
+
             orig_init.Initialize(pstream, 0x00000002)?;
             orig_init.cast()?
         };
@@ -86,6 +83,8 @@ impl IInitializeWithStream_Impl for PropertyHandler_Impl {
         let orig_ps_cap: IPropertyStoreCapabilities = orig_ps.cast()?;
         *self.orig_ps.borrow_mut() = Some(orig_ps);
         *self.orig_ps_cap.borrow_mut() = Some(orig_ps_cap);
+
+        //Reading XMP from file
 
         Ok(())
     }

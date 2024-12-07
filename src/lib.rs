@@ -26,9 +26,9 @@ impl IClassFactory_Impl for ClassFactory_Impl {
         }
 
         unsafe {
-            if *riid == IInitializeWithStream::IID {
+            if *riid == IInitializeWithFile::IID {
                 let unknown: property_handler::PropertyHandler = Default::default();
-                let ph: IInitializeWithStream = unknown.into();
+                let ph: IInitializeWithFile = unknown.into();
                 ph.query(riid, ppvobject).ok()
             } else {
                 E_NOINTERFACE.ok()
