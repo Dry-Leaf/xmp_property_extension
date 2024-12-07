@@ -1,9 +1,10 @@
 use regex::Regex;
 use std::cell::RefCell;
 use std::ffi::c_void;
+use std::path::Path;
 use std::sync::LazyLock;
 
-use xmp_toolkit::XmpFile;
+use xmp_toolkit::XmpMeta;
 
 use windows::Win32::Foundation::*;
 use windows::Win32::UI::Shell::{PropertiesSystem::*, SHCreateStreamOnFileEx};
@@ -20,10 +21,11 @@ static EXTENSION_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r#"\.[^\.]
 
 fn get_file_type(file_path: &str) -> &str {
     let ext = EXTENSION_REGEX.find(file_path).unwrap();
+    println!("extenion! - {:?}", ext);
     ext.as_str()
 }
 
-#[allow(non_snake_case)]
+#[allow(non_snake_case, unused_variables)]
 impl IInitializeWithFile_Impl for PropertyHandler_Impl {
     fn Initialize(&self, pszfilepath: &PCWSTR, _grfmode: u32) -> Result<()> {
         //makes sure COM runtime is initialized
@@ -71,10 +73,14 @@ impl IInitializeWithFile_Impl for PropertyHandler_Impl {
 
             RegCloseKey(phkResult).ok()?;
             let orig_clsid: GUID = CLSIDFromString(PWSTR::from_raw(buffer.as_mut_ptr()))?;
-
+            println!("GUID! - {:x}", orig_clsid.to_u128());
             //Initializing and retrieving interfaces
-            let orig_init: IInitializeWithStream = CoCreateInstance(&orig_clsid, None, CLSCTX_ALL)?;
+            let orig_init_ps: IPropertyStore =
+                CoCreateInstance(&orig_clsid, None, CLSCTX_INPROC_SERVER)?;
+            println!("I am so happy~~~~~");
             let pstream = &SHCreateStreamOnFileEx(*pszfilepath, 0, 0, BOOL(0), None)?;
+
+            let orig_init: IInitializeWithStream = orig_init_ps.cast()?;
 
             orig_init.Initialize(pstream, 0x00000002)?;
             orig_init.cast()?
@@ -85,6 +91,10 @@ impl IInitializeWithFile_Impl for PropertyHandler_Impl {
         *self.orig_ps_cap.borrow_mut() = Some(orig_ps_cap);
 
         //Reading XMP from file
+        let file_rpath = Path::new(&file_path);
+        let xmp_data = XmpMeta::from_file(file_rpath);
+
+        println!("XMP - {:?}", xmp_data);
 
         Ok(())
     }
@@ -119,7 +129,7 @@ impl IPropertyStore_Impl for PropertyHandler_Impl {
     }
 }
 
-#[allow(non_snake_case, unused_variables)]
+#[allow(non_snake_case)]
 impl IPropertyStoreCapabilities_Impl for PropertyHandler_Impl {
     fn IsPropertyWritable(&self, key: *const PROPERTYKEY) -> windows::core::Result<()> {
         let binding = self.orig_ps_cap.borrow();
