@@ -44,7 +44,7 @@ fn xmp_test() -> Result<()> {
 #[test]
 #[allow(non_snake_case, unused_variables)]
 fn init_test() -> Result<()> {
-    let img_path = r"C:\Users\nobody\Pictures\arc\arc38\4a640c75ee8439375004ccb05ae123df.jpg";
+    let img_path = r"C:\Users\nobody\Documents\code\compiled\sample.png";
     //r"C:\Users\nobody\Pictures\arc\arc38\4a640c75ee8439375004ccb05ae123df.jpg";
     //r"C:\Users\nobody\Documents\code\compiled\sample.jxl";
     //r"C:\Users\nobody\Pictures\arc\arc35\comiket103.png";

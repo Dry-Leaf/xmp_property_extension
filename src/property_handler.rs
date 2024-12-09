@@ -33,11 +33,11 @@ static EXTENSION_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r#"\.[^\.]
 
 fn get_file_type(file_path: &str) -> &str {
     let ext = EXTENSION_REGEX.find(file_path).unwrap();
-    println!("extenion! - {:?}", ext);
+    println!("extension! - {:?}", ext);
     ext.as_str()
 }
 
-#[allow(non_snake_case, unused_variables)]
+#[allow(non_snake_case)]
 impl IInitializeWithFile_Impl for PropertyHandler_Impl {
     fn Initialize(&self, pszfilepath: &PCWSTR, _grfmode: u32) -> Result<()> {
         //makes sure COM runtime is initialized
@@ -102,15 +102,17 @@ impl IInitializeWithFile_Impl for PropertyHandler_Impl {
         //Reading XMP from file
         let file_rpath = Path::new(&file_path);
 
-        let xmp_data = XmpMeta::from_file(file_rpath).unwrap();
-        if xmp_data.contains_property(DC, "subject") {
-            let tags: Vec<Vec<u16>> = xmp_data
-                .property_array(DC, "subject")
-                .map(|s| s.value.encode_utf16().chain(Some(0)).collect())
-                .collect();
+        let xmp_option = XmpMeta::from_file(file_rpath);
+        if !xmp_option.is_err() {
+            let xmp_data = xmp_option.unwrap();
+            if xmp_data.contains_property(DC, "subject") {
+                let tags: Vec<Vec<u16>> = xmp_data
+                    .property_array(DC, "subject")
+                    .map(|s| s.value.encode_utf16().chain(Some(0)).collect())
+                    .collect();
 
-            let tag_ptrs: Vec<PCWSTR> = tags.iter().map(|t| PCWSTR::from_raw(t.as_ptr())).collect();
-            *self.tags.borrow_mut() = Some(Tags(tags)); //, tag_ptrs));
+                *self.tags.borrow_mut() = Some(Tags(tags));
+            }
         }
 
         Ok(())
@@ -177,19 +179,26 @@ impl IPropertyStore_Impl for PropertyHandler_Impl {
     }
 
     fn SetValue(&self, key: *const PROPERTYKEY, propvar: *const PROPVARIANT) -> Result<()> {
-        Ok(())
+        Err(windows::core::Error::new(
+            WINCODEC_ERR_UNSUPPORTEDOPERATION,
+            "Setter not supported",
+        ))
     }
 
     fn Commit(&self) -> Result<()> {
-        Ok(())
+        Err(windows::core::Error::new(
+            WINCODEC_ERR_UNSUPPORTEDOPERATION,
+            "Setter not supported",
+        ))
     }
 }
 
 #[allow(non_snake_case)]
 impl IPropertyStoreCapabilities_Impl for PropertyHandler_Impl {
-    fn IsPropertyWritable(&self, key: *const PROPERTYKEY) -> windows::core::Result<()> {
-        let binding = self.orig_ps_cap.borrow();
-        let ps_cap = binding.as_ref().unwrap();
-        unsafe { ps_cap.IsPropertyWritable(key) }
+    fn IsPropertyWritable(&self, _key: *const PROPERTYKEY) -> windows::core::Result<()> {
+        Err(windows::core::Error::new(
+            WINCODEC_ERR_UNSUPPORTEDOPERATION,
+            "Setter not supported",
+        ))
     }
 }
