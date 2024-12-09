@@ -1,6 +1,7 @@
 #[cfg(test)]
-use crate::{dll::ClassFactory, properties::PropertyHandler};
 use std::path::Path;
+
+use crate::{dll::ClassFactory, properties::PropertyHandler};
 
 use windows::{
     core::*,
@@ -50,19 +51,28 @@ fn main_test() -> Result<()> {
     process(with_tag_path)?;
 
     let without_tag_path = r"C:\Users\nobody\Documents\code\compiled\notag.png";
-    process(without_tag_path)
+    process(without_tag_path)?;
+
+    let gif_with_tag_path = r"C:\Users\nobody\Documents\code\compiled\sample.gif";
+    process(gif_with_tag_path)
 }
 
 #[allow(non_snake_case)]
 fn process(img_path: &str) -> Result<()> {
+    let cf: IClassFactory = ClassFactory(0xA38B883C_1682_497E_97B0_0A3A9E801682 as u128).into();
+    unsafe { cf.CreateInstance::<Option<&IUnknown>, IInitializeWithFile>(None)? };
+
     let middle: Vec<u16> = img_path.encode_utf16().chain(Some(0)).collect();
     let pszFile: PCWSTR = PCWSTR::from_raw(middle.as_ptr());
 
-    let dummy_ph: PropertyHandler = Default::default();
-    let ph_iu: IUnknown = dummy_ph.into();
+    //Identifying file type
+    let ext = 0xA38B883C_1682_497E_97B0_0A3A9E801682 as u128;
 
-    let cf: IClassFactory = ClassFactory(String::from("")).into();
-    unsafe { cf.CreateInstance::<Option<&IUnknown>, IInitializeWithFile>(None)? };
+    let dummy_ph = PropertyHandler {
+        ext,
+        ..Default::default()
+    };
+    let ph_iu: IUnknown = dummy_ph.into();
 
     let ph: IInitializeWithFile = ph_iu.cast()?;
 

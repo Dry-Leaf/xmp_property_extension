@@ -1,8 +1,5 @@
-use regex::Regex;
 use std::cell::RefCell;
-use std::ffi::c_void;
 use std::path::Path;
-use std::sync::LazyLock;
 
 use xmp_toolkit::{xmp_ns::DC, XmpMeta};
 
@@ -10,10 +7,7 @@ use windows::{
     core::*,
     Win32::{
         Foundation::*,
-        System::{
-            Com::{StructuredStorage::InitPropVariantFromStringVector, *},
-            Registry::*,
-        },
+        System::Com::{StructuredStorage::InitPropVariantFromStringVector, *},
         UI::Shell::{PropertiesSystem::*, SHCreateStreamOnFileEx, PSGUID_SUMMARYINFORMATION},
     },
 };
@@ -27,14 +21,7 @@ pub struct PropertyHandler {
     pub orig_ps: RefCell<Option<IPropertyStore>>,
     pub orig_ps_cap: RefCell<Option<IPropertyStoreCapabilities>>,
     pub tags: RefCell<Option<Tags>>,
-}
-
-static EXTENSION_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r#"\.[^\.]*+$"#).unwrap());
-
-fn get_file_type(file_path: &str) -> &str {
-    let ext = EXTENSION_REGEX.find(file_path).unwrap();
-    println!("extension! - {:?}", ext);
-    ext.as_str()
+    pub ext: u128,
 }
 
 #[allow(non_snake_case)]
@@ -43,49 +30,8 @@ impl IInitializeWithFile_Impl for PropertyHandler_Impl {
         //makes sure COM runtime is initialized
         let _ = unsafe { CoIncrementMTAUsage() };
 
-        //Identifying file type
-        let file_path = unsafe { pszfilepath.to_string()? };
-        let binding = file_path.to_owned();
-        let ext = get_file_type(&binding);
-
-        //Getting  the file type's original property handler
-        let mut orig_key = String::with_capacity(85);
-        orig_key.push_str(
-            r#"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\PropertySystem\\PropertyHandlers\\"#,
-        );
-        orig_key.push_str(&ext);
-
-        let inter: Vec<u16> = orig_key.encode_utf16().chain(Some(0)).collect();
-        let lpSubKey: PCWSTR = PCWSTR::from_raw(inter.as_ptr());
-
-        let mut phkResult: HKEY = Default::default();
-
         let orig_ps: IPropertyStore = unsafe {
-            //Getting GUID of original property handler
-            RegOpenKeyExW(
-                HKEY_LOCAL_MACHINE,
-                lpSubKey,
-                0,
-                KEY_QUERY_VALUE,
-                &mut phkResult,
-            )
-            .ok()?;
-
-            let mut buffer = [0u16; 64];
-            let mut size: u32 = (64 * std::mem::size_of_val(&buffer[0])) as u32;
-            RegGetValueW(
-                phkResult,
-                None,
-                None,
-                RRF_RT_REG_SZ,
-                None,
-                Some(buffer.as_mut_ptr() as *mut c_void),
-                Some(&mut size),
-            )
-            .ok()?;
-
-            RegCloseKey(phkResult).ok()?;
-            let orig_clsid: GUID = CLSIDFromString(PWSTR::from_raw(buffer.as_mut_ptr()))?;
+            let orig_clsid = GUID::from_u128(self.ext);
 
             //Initializing and retrieving interfaces
             let orig_init: IInitializeWithStream =
@@ -101,6 +47,7 @@ impl IInitializeWithFile_Impl for PropertyHandler_Impl {
         *self.orig_ps_cap.borrow_mut() = Some(orig_ps_cap);
 
         //Reading XMP from file
+        let file_path = unsafe { pszfilepath.to_string()? };
         let file_rpath = Path::new(&file_path);
 
         let xmp_option = XmpMeta::from_file(file_rpath);

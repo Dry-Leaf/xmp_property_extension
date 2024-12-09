@@ -17,7 +17,7 @@ use windows::Win32::{
     UI::Shell::PropertiesSystem::*,
 };
 
-pub const PNG_CLSID: GUID = GUID::from_u128(0x33c20ecf_3e11_42c6_9285_af2dc3cb40d8);
+pub const DEFAULT_CLSID: GUID = GUID::from_u128(0x33c20ecf_3e11_42c6_9285_af2dc3cb40d8);
 pub const JXL_CLSID: GUID = GUID::from_u128(0xee305c51_c1dd_4121_466a_117d67574bba);
 
 static mut DLL_INSTANCE: HINSTANCE = HINSTANCE(std::ptr::null_mut());
@@ -29,7 +29,7 @@ fn get_module_path(instance: HINSTANCE) -> Result<String, HRESULT> {
 }
 
 #[implement(IClassFactory)]
-pub struct ClassFactory(pub String);
+pub struct ClassFactory(pub u128);
 
 #[allow(non_snake_case, unused_variables)]
 impl IClassFactory_Impl for ClassFactory_Impl {
@@ -45,7 +45,10 @@ impl IClassFactory_Impl for ClassFactory_Impl {
 
         unsafe {
             if *riid == IInitializeWithFile::IID {
-                let unknown: PropertyHandler = Default::default();
+                let unknown: PropertyHandler = PropertyHandler {
+                    ext: self.0.clone(),
+                    ..Default::default()
+                };
                 let ph: IInitializeWithFile = unknown.into();
                 ph.query(riid, ppvobject).ok()
             } else {
@@ -118,8 +121,8 @@ pub unsafe extern "system" fn DllGetClassObject(
     }
 
     let ext = match *rclsid {
-        PNG_CLSID => ".png",
-        JXL_CLSID => ".jxl",
+        DEFAULT_CLSID => 0xA38B883C_1682_497E_97B0_0A3A9E801682,
+        JXL_CLSID => 0x95FFE0F8_AB15_4751_A2F3_CFAFDBF13664,
         _ => return CLASS_E_CLASSNOTAVAILABLE,
     };
 
