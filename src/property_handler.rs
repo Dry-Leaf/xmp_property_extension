@@ -45,7 +45,8 @@ impl IInitializeWithFile_Impl for PropertyHandler_Impl {
 
         //Identifying file type
         let file_path = unsafe { pszfilepath.to_string()? };
-        let ext = get_file_type(&file_path).to_owned();
+        let binding = file_path.to_owned();
+        let ext = get_file_type(&binding);
 
         //Getting  the file type's original property handler
         let mut orig_key = String::with_capacity(85);

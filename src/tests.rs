@@ -5,7 +5,7 @@ use std::path::Path;
 
 use windows::Win32::{
     System::Com::StructuredStorage::InitPropVariantFromStringVector,
-    UI::Shell::{SHCreateStreamOnFileEx, PSGUID_SUMMARYINFORMATION},
+    UI::Shell::PSGUID_SUMMARYINFORMATION,
 };
 
 use xmp_toolkit::{xmp_ns::DC, XmpMeta};
@@ -43,16 +43,18 @@ fn xmp_test() -> Result<()> {
 
 #[test]
 #[allow(non_snake_case, unused_variables)]
-fn init_test() -> Result<()> {
-    let img_path = r"C:\Users\nobody\Documents\code\compiled\sample.png";
-    //r"C:\Users\nobody\Pictures\arc\arc38\4a640c75ee8439375004ccb05ae123df.jpg";
-    //r"C:\Users\nobody\Documents\code\compiled\sample.jxl";
-    //r"C:\Users\nobody\Pictures\arc\arc35\comiket103.png";
+fn main_test() -> Result<()> {
+    let with_tag_path = r"C:\Users\nobody\Documents\code\compiled\sample.png";
+    process(with_tag_path)?;
 
-    let middle: Vec<u16> = img_path.encode_utf16().collect();
+    let without_tag_path = r"C:\Users\nobody\Documents\code\compiled\notag.png";
+    process(with_tag_path)
+}
+
+#[allow(non_snake_case)]
+fn process(img_path: &str) -> Result<()> {
+    let middle: Vec<u16> = img_path.encode_utf16().chain(Some(0)).collect();
     let pszFile: PCWSTR = PCWSTR::from_raw(middle.as_ptr());
-
-    let stream: &IStream = unsafe { &SHCreateStreamOnFileEx(pszFile, 0, 0, BOOL(0), None)? };
 
     let dummy_ph: PropertyHandler = Default::default();
     let ph_iu: IUnknown = dummy_ph.into();
