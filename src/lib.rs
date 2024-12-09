@@ -1,8 +1,9 @@
 use std::ffi::c_void;
 
-use windows::Win32::Foundation::*;
-use windows::Win32::UI::Shell::PropertiesSystem::*;
-use windows::{core::*, Win32::System::Com::*};
+use windows::{
+    core::*,
+    Win32::{Foundation::*, System::Com::*, UI::Shell::PropertiesSystem::*},
+};
 
 mod property_handler;
 #[cfg(test)]

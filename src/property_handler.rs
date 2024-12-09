@@ -4,17 +4,29 @@ use std::ffi::c_void;
 use std::path::Path;
 use std::sync::LazyLock;
 
-use xmp_toolkit::XmpMeta;
+use xmp_toolkit::{xmp_ns::DC, XmpMeta};
 
-use windows::Win32::Foundation::*;
-use windows::Win32::UI::Shell::{PropertiesSystem::*, SHCreateStreamOnFileEx};
-use windows::{core::*, Win32::System::Com::*, Win32::System::Registry::*};
+use windows::{
+    core::*,
+    Win32::{
+        Foundation::*,
+        System::{
+            Com::{StructuredStorage::InitPropVariantFromStringVector, *},
+            Registry::*,
+        },
+        UI::Shell::{PropertiesSystem::*, SHCreateStreamOnFileEx, PSGUID_SUMMARYINFORMATION},
+    },
+};
+
+#[derive(Clone)]
+pub struct Tags(Vec<Vec<u16>>);
 
 #[implement(IInitializeWithFile, IPropertyStore, IPropertyStoreCapabilities)]
 #[derive(Default)]
 pub struct PropertyHandler {
     pub orig_ps: RefCell<Option<IPropertyStore>>,
     pub orig_ps_cap: RefCell<Option<IPropertyStoreCapabilities>>,
+    pub tags: RefCell<Option<Tags>>,
 }
 
 static EXTENSION_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r#"\.[^\.]*+$"#).unwrap());
@@ -42,7 +54,7 @@ impl IInitializeWithFile_Impl for PropertyHandler_Impl {
         );
         orig_key.push_str(&ext);
 
-        let inter: Vec<u16> = orig_key.encode_utf16().collect();
+        let inter: Vec<u16> = orig_key.encode_utf16().chain(Some(0)).collect();
         let lpSubKey: PCWSTR = PCWSTR::from_raw(inter.as_ptr());
 
         let mut phkResult: HKEY = Default::default();
@@ -73,14 +85,11 @@ impl IInitializeWithFile_Impl for PropertyHandler_Impl {
 
             RegCloseKey(phkResult).ok()?;
             let orig_clsid: GUID = CLSIDFromString(PWSTR::from_raw(buffer.as_mut_ptr()))?;
-            println!("GUID! - {:x}", orig_clsid.to_u128());
-            //Initializing and retrieving interfaces
-            let orig_init_ps: IPropertyStore =
-                CoCreateInstance(&orig_clsid, None, CLSCTX_INPROC_SERVER)?;
-            println!("I am so happy~~~~~");
-            let pstream = &SHCreateStreamOnFileEx(*pszfilepath, 0, 0, BOOL(0), None)?;
 
-            let orig_init: IInitializeWithStream = orig_init_ps.cast()?;
+            //Initializing and retrieving interfaces
+            let orig_init: IInitializeWithStream =
+                CoCreateInstance(&orig_clsid, None, CLSCTX_INPROC_SERVER)?;
+            let pstream = &SHCreateStreamOnFileEx(*pszfilepath, 0, 0, BOOL(0), None)?;
 
             orig_init.Initialize(pstream, 0x00000002)?;
             orig_init.cast()?
@@ -92,9 +101,17 @@ impl IInitializeWithFile_Impl for PropertyHandler_Impl {
 
         //Reading XMP from file
         let file_rpath = Path::new(&file_path);
-        let xmp_data = XmpMeta::from_file(file_rpath);
 
-        println!("XMP - {:?}", xmp_data);
+        let xmp_data = XmpMeta::from_file(file_rpath).unwrap();
+        if xmp_data.contains_property(DC, "subject") {
+            let tags: Vec<Vec<u16>> = xmp_data
+                .property_array(DC, "subject")
+                .map(|s| s.value.encode_utf16().chain(Some(0)).collect())
+                .collect();
+
+            let tag_ptrs: Vec<PCWSTR> = tags.iter().map(|t| PCWSTR::from_raw(t.as_ptr())).collect();
+            *self.tags.borrow_mut() = Some(Tags(tags)); //, tag_ptrs));
+        }
 
         Ok(())
     }
@@ -105,19 +122,58 @@ impl IPropertyStore_Impl for PropertyHandler_Impl {
     fn GetCount(&self) -> Result<u32> {
         let binding = self.orig_ps.borrow();
         let ps = binding.as_ref().unwrap();
-        unsafe { ps.GetCount() }
+        let gc = unsafe { ps.GetCount() }.unwrap();
+
+        let tag_tuple = self.tags.borrow();
+        match *tag_tuple {
+            Some(_) => Ok(gc + 1),
+            None => Ok(gc),
+        }
     }
 
     fn GetAt(&self, iprop: u32, pkey: *mut PROPERTYKEY) -> Result<()> {
         let binding = self.orig_ps.borrow();
         let ps = binding.as_ref().unwrap();
+
+        let tag_tuple = self.tags.borrow();
+        let iprop = match *tag_tuple {
+            Some(_) => {
+                if iprop == 0 {
+                    unsafe {
+                        *pkey = PROPERTYKEY {
+                            fmtid: PSGUID_SUMMARYINFORMATION,
+                            pid: 5 as u32,
+                        }
+                    };
+                    return Ok(());
+                } else {
+                    iprop - 1
+                }
+            }
+            None => iprop,
+        };
         unsafe { ps.GetAt(iprop, pkey) }
     }
 
     fn GetValue(&self, key: *const PROPERTYKEY) -> Result<PROPVARIANT> {
         let binding = self.orig_ps.borrow();
         let ps = binding.as_ref().unwrap();
-        unsafe { ps.GetValue(key) }
+
+        let tags = self.tags.borrow();
+        unsafe {
+            if (*key).fmtid == PSGUID_SUMMARYINFORMATION && (*key).pid == 5 {
+                let tag_ptrs: Vec<PCWSTR> = tags
+                    .clone()
+                    .unwrap()
+                    .0
+                    .iter()
+                    .map(|t| PCWSTR::from_raw(t.as_ptr()))
+                    .collect();
+                InitPropVariantFromStringVector(Some(&tag_ptrs))
+            } else {
+                ps.GetValue(key)
+            }
+        }
     }
 
     fn SetValue(&self, key: *const PROPERTYKEY, propvar: *const PROPVARIANT) -> Result<()> {
