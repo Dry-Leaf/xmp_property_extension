@@ -1,11 +1,13 @@
 #[cfg(test)]
-use super::*;
-use crate::property_handler::PropertyHandler;
+use crate::{dll::ClassFactory, properties::PropertyHandler};
 use std::path::Path;
 
-use windows::Win32::{
-    System::Com::StructuredStorage::InitPropVariantFromStringVector,
-    UI::Shell::PSGUID_SUMMARYINFORMATION,
+use windows::{
+    core::*,
+    Win32::{
+        System::Com::{StructuredStorage::InitPropVariantFromStringVector, *},
+        UI::Shell::{PropertiesSystem::*, PSGUID_SUMMARYINFORMATION},
+    },
 };
 
 use xmp_toolkit::{xmp_ns::DC, XmpMeta};
@@ -59,7 +61,7 @@ fn process(img_path: &str) -> Result<()> {
     let dummy_ph: PropertyHandler = Default::default();
     let ph_iu: IUnknown = dummy_ph.into();
 
-    let cf: IClassFactory = ClassFactory.into();
+    let cf: IClassFactory = ClassFactory(String::from("")).into();
     unsafe { cf.CreateInstance::<Option<&IUnknown>, IInitializeWithFile>(None)? };
 
     let ph: IInitializeWithFile = ph_iu.cast()?;
