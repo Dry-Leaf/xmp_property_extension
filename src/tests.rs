@@ -48,7 +48,7 @@ fn main_test() -> Result<()> {
     process(with_tag_path)?;
 
     let without_tag_path = r"C:\Users\nobody\Documents\code\compiled\notag.png";
-    process(with_tag_path)
+    process(without_tag_path)
 }
 
 #[allow(non_snake_case)]

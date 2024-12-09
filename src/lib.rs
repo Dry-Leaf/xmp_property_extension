@@ -2,12 +2,20 @@ use std::ffi::c_void;
 
 use windows::{
     core::*,
-    Win32::{Foundation::*, System::Com::*, UI::Shell::PropertiesSystem::*},
+    Win32::{
+        Foundation::*,
+        System::{
+            Com::*, LibraryLoader::DisableThreadLibraryCalls, SystemServices::DLL_PROCESS_ATTACH,
+        },
+        UI::Shell::PropertiesSystem::*,
+    },
 };
 
 mod property_handler;
 #[cfg(test)]
 mod tests;
+
+static mut DLL_INSTANCE: HINSTANCE = HINSTANCE(std::ptr::null_mut());
 
 pub const CF_CLSID: GUID = GUID::from_u128(0x33c20ecf_3e11_42c6_9285_af2dc3cb40d8);
 
@@ -40,6 +48,22 @@ impl IClassFactory_Impl for ClassFactory_Impl {
     fn LockServer(&self, flock: BOOL) -> Result<()> {
         E_NOTIMPL.ok()
     }
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "stdcall" fn DllMain(
+    dll_instance: HINSTANCE,
+    reason: u32,
+    _reserved: *mut c_void,
+) -> bool {
+    if reason == DLL_PROCESS_ATTACH {
+        unsafe {
+            DLL_INSTANCE = dll_instance;
+            DisableThreadLibraryCalls(dll_instance).unwrap();
+        }
+    }
+    true
 }
 
 #[no_mangle]
