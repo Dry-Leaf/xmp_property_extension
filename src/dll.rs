@@ -45,15 +45,19 @@ impl IClassFactory_Impl for ClassFactory_Impl {
         }
 
         unsafe {
-            if *riid == IInitializeWithFile::IID {
-                let unknown: PropertyHandler = PropertyHandler {
-                    ext: self.0.clone(),
-                    ..Default::default()
-                };
-                let ph: IInitializeWithFile = unknown.into();
-                ph.query(riid, ppvobject).ok()
-            } else {
-                E_NOINTERFACE.ok()
+            match *riid {
+                IPropertyStore::IID | IInitializeWithStream::IID => {
+                    let unknown: IUnknown = PropertyHandler {
+                        ext: self.0.clone(),
+                        ..Default::default()
+                    }
+                    .into();
+                    unknown.query(riid, ppvobject).ok()
+                }
+                _ => {
+                    log::trace!("Unknown IID: {:?}", *riid);
+                    E_NOINTERFACE.ok()
+                }
             }
         }
     }
@@ -117,6 +121,16 @@ pub unsafe extern "system" fn DllGetClassObject(
     riid: *const GUID,
     pout: *mut *mut core::ffi::c_void,
 ) -> HRESULT {
+    #[cfg(debug_assertions)]
+    {
+        // Set up logging to the project directory.
+        simple_logging::log_to_file(
+            format!("{}\\debug.log", env!("CARGO_MANIFEST_DIR")),
+            log::LevelFilter::Trace,
+        )
+        .unwrap();
+    }
+    log::trace!("DllGetClassObject");
     if *riid != IClassFactory::IID {
         return E_UNEXPECTED;
     }
@@ -125,7 +139,7 @@ pub unsafe extern "system" fn DllGetClassObject(
         DEFAULT_CLSID => 0xA38B883C_1682_497E_97B0_0A3A9E801682,
         JXL_CLSID => 0x95FFE0F8_AB15_4751_A2F3_CFAFDBF13664,
         MPEG_4_CLSID => 0xF81B1B56_7613_4EE4_BC05_1FAB5DE5C07E,
-        _ => return CLASS_E_CLASSNOTAVAILABLE,
+        _ => 0xA38B883C_1682_497E_97B0_0A3A9E801682,
     };
 
     let factory = ClassFactory(ext.to_owned());

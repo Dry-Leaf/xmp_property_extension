@@ -3,7 +3,12 @@ name = "xmp_property_extension"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+crate-type = ["cdylib"]
+
 [dependencies]
+simple-logging = "2.0.2"
+log = "0.4.22"
 windows-core = "0.58"
 regex = "1.11.1"
 winreg = "0.52.0"
@@ -26,3 +31,6 @@ version = "1.9.1"
 features = [
   "crt_static"
 ]
+
+[build-dependencies]
+winresource = "0.1.19"

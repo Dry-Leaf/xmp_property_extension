@@ -33,6 +33,10 @@ impl IInitializeWithFile_Impl for PropertyHandler_Impl {
             let _ = CoIncrementMTAUsage();
         }
 
+        log::trace!("Initialize!");
+        let file_path = unsafe { pszfilepath.to_string()? };
+        log::trace!("{}", file_path);
+
         let orig_ps: IPropertyStore = unsafe {
             let orig_clsid = GUID::from_u128(self.ext);
 
@@ -52,6 +56,8 @@ impl IInitializeWithFile_Impl for PropertyHandler_Impl {
         //Reading XMP from file
         let file_path = unsafe { pszfilepath.to_string()? };
         let file_rpath = Path::new(&file_path);
+
+        log::trace!("{}", file_path);
 
         let xmp_option = XmpMeta::from_file(file_rpath);
         if !xmp_option.is_err() {
@@ -73,9 +79,12 @@ impl IInitializeWithFile_Impl for PropertyHandler_Impl {
 #[allow(non_snake_case, unused_variables)]
 impl IPropertyStore_Impl for PropertyHandler_Impl {
     fn GetCount(&self) -> Result<u32> {
+        log::trace!("GetCount");
         let binding = self.orig_ps.borrow();
         let ps = binding.as_ref().unwrap();
         let gc = unsafe { ps.GetCount() }.unwrap();
+
+        log::trace!("gc - {}", gc);
 
         let tag_tuple = self.tags.borrow();
         match *tag_tuple {
@@ -85,6 +94,7 @@ impl IPropertyStore_Impl for PropertyHandler_Impl {
     }
 
     fn GetAt(&self, iprop: u32, pkey: *mut PROPERTYKEY) -> Result<()> {
+        log::trace!("GetAt");
         let binding = self.orig_ps.borrow();
         let ps = binding.as_ref().unwrap();
 
@@ -105,24 +115,32 @@ impl IPropertyStore_Impl for PropertyHandler_Impl {
             }
             None => iprop,
         };
+        log::trace!("iprop - {} pkey - {:?}", iprop, pkey);
         unsafe { ps.GetAt(iprop, pkey) }
     }
 
     fn GetValue(&self, key: *const PROPERTYKEY) -> Result<PROPVARIANT> {
+        log::trace!("GetValue");
+        unsafe {
+            log::trace!("key - {:?}", *key);
+        }
         let binding = self.orig_ps.borrow();
         let ps = binding.as_ref().unwrap();
 
-        let tags = self.tags.borrow();
+        let tag_tuple = self.tags.borrow();
+
         unsafe {
             if (*key).fmtid == PSGUID_SUMMARYINFORMATION && (*key).pid == 5 {
-                let tag_ptrs: Vec<PCWSTR> = tags
-                    .clone()
-                    .unwrap()
-                    .0
-                    .iter()
-                    .map(|t| PCWSTR::from_raw(t.as_ptr()))
-                    .collect();
-                InitPropVariantFromStringVector(Some(&tag_ptrs))
+                if let Some(tags) = &tag_tuple.as_ref() {
+                    let tag_ptrs: Vec<PCWSTR> = tags
+                        .0
+                        .iter()
+                        .map(|t| PCWSTR::from_raw(t.as_ptr()))
+                        .collect();
+                    InitPropVariantFromStringVector(Some(&tag_ptrs))
+                } else {
+                    ps.GetValue(key)
+                }
             } else {
                 ps.GetValue(key)
             }
