@@ -41,8 +41,7 @@ impl IInitializeWithFile_Impl for PropertyHandler_Impl {
             let orig_clsid = GUID::from_u128(self.ext);
 
             //Initializing and retrieving interfaces
-            let orig_init: IInitializeWithStream =
-                CoCreateInstance(&orig_clsid, None, CLSCTX_INPROC_SERVER)?;
+            let orig_init: IInitializeWithStream = CoCreateInstance(&orig_clsid, None, CLSCTX_ALL)?;
             let pstream = &SHCreateStreamOnFileEx(*pszfilepath, 0, 0, BOOL(0), None)?;
 
             orig_init.Initialize(pstream, STGM_READ.0)?;
@@ -99,24 +98,21 @@ impl IPropertyStore_Impl for PropertyHandler_Impl {
         let ps = binding.as_ref().unwrap();
 
         let tag_tuple = self.tags.borrow();
-        let iprop = match *tag_tuple {
-            Some(_) => {
-                if iprop == 0 {
-                    unsafe {
-                        *pkey = PROPERTYKEY {
-                            fmtid: PSGUID_SUMMARYINFORMATION,
-                            pid: 5 as u32,
-                        }
-                    };
-                    return Ok(());
-                } else {
-                    iprop - 1
-                }
+
+        let orig_attempt = unsafe { ps.GetAt(iprop, pkey) };
+        if orig_attempt.is_err() {
+            if let Some(tags) = &tag_tuple.as_ref() {
+                unsafe {
+                    *pkey = PROPERTYKEY {
+                        fmtid: PSGUID_SUMMARYINFORMATION,
+                        pid: 5 as u32,
+                    }
+                };
+                return Ok(());
             }
-            None => iprop,
-        };
-        log::trace!("iprop - {} pkey - {:?}", iprop, pkey);
-        unsafe { ps.GetAt(iprop, pkey) }
+        }
+
+        orig_attempt
     }
 
     fn GetValue(&self, key: *const PROPERTYKEY) -> Result<PROPVARIANT> {

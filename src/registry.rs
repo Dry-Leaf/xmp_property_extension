@@ -26,6 +26,7 @@ fn register_clsid_base(module_path: &str, clsid: &windows::core::GUID) -> std::i
     let clsid_key = hkcr.open_subkey("CLSID")?;
     let (key, _) = clsid_key.create_subkey(guid_to_string(clsid))?;
     key.set_value("", &"tag-support")?;
+    key.set_value("DisableProcessIsolation", &(1 as u32))?;
 
     let (inproc, _) = key.create_subkey("InProcServer32")?;
     inproc.set_value("", &module_path)?;

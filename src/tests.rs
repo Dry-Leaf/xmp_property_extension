@@ -14,7 +14,7 @@ use windows::{
 
 use xmp_toolkit::{xmp_ns::DC, XmpMeta};
 
-#[test]
+//#[test]
 #[allow(non_snake_case, unused_variables)]
 fn xmp_test() -> Result<()> {
     let img_path = r"test_images/sample.png";
@@ -69,9 +69,6 @@ fn main_test() -> Result<()> {
 
 #[allow(non_snake_case)]
 fn process(img_path: &str, ext: u128) -> Result<()> {
-    let cf: IClassFactory = ClassFactory(0xA38B883C_1682_497E_97B0_0A3A9E801682 as u128).into();
-    unsafe { cf.CreateInstance::<Option<&IUnknown>, IInitializeWithFile>(None)? };
-
     let middle: Vec<u16> = img_path.encode_utf16().chain(Some(0)).collect();
     let pszFile: PCWSTR = PCWSTR::from_raw(middle.as_ptr());
 
@@ -97,7 +94,8 @@ fn process(img_path: &str, ext: u128) -> Result<()> {
             //println!("GetAt - {:?}", pk);
 
             let val = store.GetValue(&pk as *const PROPERTYKEY);
-            if p == 0 {
+            if pk.fmtid == PSGUID_SUMMARYINFORMATION {
+                println!("GetAt index - {:?}\n", p);
                 println!("GetValue - {:?}\n", val);
             }
         }
