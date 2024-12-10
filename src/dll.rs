@@ -18,6 +18,7 @@ use windows::Win32::{
 };
 
 pub const DEFAULT_CLSID: GUID = GUID::from_u128(0x33c20ecf_3e11_42c6_9285_af2dc3cb40d8);
+pub const MPEG_4_CLSID: GUID = GUID::from_u128(0xD369E852_D137_F450_A2A1_DF8C6757CE0B);
 pub const JXL_CLSID: GUID = GUID::from_u128(0xee305c51_c1dd_4121_466a_117d67574bba);
 
 static mut DLL_INSTANCE: HINSTANCE = HINSTANCE(std::ptr::null_mut());
@@ -123,6 +124,7 @@ pub unsafe extern "system" fn DllGetClassObject(
     let ext = match *rclsid {
         DEFAULT_CLSID => 0xA38B883C_1682_497E_97B0_0A3A9E801682,
         JXL_CLSID => 0x95FFE0F8_AB15_4751_A2F3_CFAFDBF13664,
+        MPEG_4_CLSID => 0xF81B1B56_7613_4EE4_BC05_1FAB5DE5C07E,
         _ => return CLASS_E_CLASSNOTAVAILABLE,
     };
 
