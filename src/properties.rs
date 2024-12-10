@@ -28,7 +28,10 @@ pub struct PropertyHandler {
 impl IInitializeWithFile_Impl for PropertyHandler_Impl {
     fn Initialize(&self, pszfilepath: &PCWSTR, _grfmode: u32) -> Result<()> {
         //makes sure COM runtime is initialized
-        let _ = unsafe { CoIncrementMTAUsage() };
+        #[cfg(test)]
+        unsafe {
+            let _ = CoIncrementMTAUsage();
+        }
 
         let orig_ps: IPropertyStore = unsafe {
             let orig_clsid = GUID::from_u128(self.ext);
@@ -38,7 +41,7 @@ impl IInitializeWithFile_Impl for PropertyHandler_Impl {
                 CoCreateInstance(&orig_clsid, None, CLSCTX_INPROC_SERVER)?;
             let pstream = &SHCreateStreamOnFileEx(*pszfilepath, 0, 0, BOOL(0), None)?;
 
-            orig_init.Initialize(pstream, 0x00000002)?;
+            orig_init.Initialize(pstream, STGM_READ.0)?;
             orig_init.cast()?
         };
 

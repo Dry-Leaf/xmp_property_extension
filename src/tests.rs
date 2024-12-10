@@ -1,4 +1,5 @@
 #[cfg(test)]
+use std::fs;
 use std::path::Path;
 
 use crate::{dll::ClassFactory, properties::PropertyHandler};
@@ -16,8 +17,7 @@ use xmp_toolkit::{xmp_ns::DC, XmpMeta};
 #[test]
 #[allow(non_snake_case, unused_variables)]
 fn xmp_test() -> Result<()> {
-    let img_path = r"C:\Users\nobody\Documents\code\compiled\sample.png";
-    //r"C:\Users\nobody\Pictures\eeb09e9ba001af09220cfc246b437cad.jpg";
+    let img_path = r"test_images/sample.png";
     let rfile_path = Path::new(&img_path);
 
     let xmp_data = XmpMeta::from_file(rfile_path).unwrap();
@@ -47,26 +47,33 @@ fn xmp_test() -> Result<()> {
 #[test]
 #[allow(non_snake_case, unused_variables)]
 fn main_test() -> Result<()> {
-    let with_tag_path = r"C:\Users\nobody\Documents\code\compiled\sample.png";
-    process(with_tag_path)?;
+    let test_im_dir = "test_images";
 
-    let without_tag_path = r"C:\Users\nobody\Documents\code\compiled\notag.png";
-    process(without_tag_path)?;
+    for entry in fs::read_dir(test_im_dir)? {
+        let entry = entry.unwrap().path();
 
-    let gif_with_tag_path = r"C:\Users\nobody\Documents\code\compiled\sample.gif";
-    process(gif_with_tag_path)
+        println!("{}", entry.extension().unwrap().to_str().unwrap());
+
+        let ext = match entry.extension().unwrap().to_str().unwrap() {
+            "jxl" => 0x95FFE0F8_AB15_4751_A2F3_CFAFDBF13664 as u128,
+            "webm" => 0xC591F150_4106_4141_B5C1_30B2101453BD as u128,
+            "mp4" => 0xf81b1b56_7613_4ee4_bc05_1fab5de5c07e as u128,
+            _ => 0xA38B883C_1682_497E_97B0_0A3A9E801682 as u128,
+        };
+
+        process(entry.to_str().unwrap(), ext)?
+    }
+
+    Ok(())
 }
 
 #[allow(non_snake_case)]
-fn process(img_path: &str) -> Result<()> {
+fn process(img_path: &str, ext: u128) -> Result<()> {
     let cf: IClassFactory = ClassFactory(0xA38B883C_1682_497E_97B0_0A3A9E801682 as u128).into();
     unsafe { cf.CreateInstance::<Option<&IUnknown>, IInitializeWithFile>(None)? };
 
     let middle: Vec<u16> = img_path.encode_utf16().chain(Some(0)).collect();
     let pszFile: PCWSTR = PCWSTR::from_raw(middle.as_ptr());
-
-    //Identifying file type
-    let ext = 0xA38B883C_1682_497E_97B0_0A3A9E801682 as u128;
 
     let dummy_ph = PropertyHandler {
         ext,
@@ -87,21 +94,23 @@ fn process(img_path: &str) -> Result<()> {
 
         for p in 0..count {
             store.GetAt(p as u32, &mut pk)?;
-            println!("GetAt - {:?}", pk);
+            //println!("GetAt - {:?}", pk);
 
             let val = store.GetValue(&pk as *const PROPERTYKEY);
-            println!("GetValue - {:?}\n", val);
+            if p == 0 {
+                println!("GetValue - {:?}\n", val);
+            }
         }
     }
 
+    /*
     let caps: IPropertyStoreCapabilities = ph.cast()?;
-
-    unsafe {
-        println!(
-            "IsPropertyWritable - {:?}",
-            caps.IsPropertyWritable(&pk as *const PROPERTYKEY)
-        );
-    }
-
+        unsafe {
+            println!(
+                "IsPropertyWritable - {:?}",
+                caps.IsPropertyWritable(&pk as *const PROPERTYKEY)
+            );
+        }
+    */
     Ok(())
 }
