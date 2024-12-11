@@ -58,10 +58,13 @@ impl IInitializeWithFile_Impl for PropertyHandler_Impl {
 
         log::trace!("{}", file_path);
 
+        println!("Getting xmp");
+
         let xmp_option = XmpMeta::from_file(file_rpath);
         if !xmp_option.is_err() {
             let xmp_data = xmp_option.unwrap();
             if xmp_data.contains_property(DC, "subject") {
+                println!("XMP got");
                 let tags: Vec<Vec<u16>> = xmp_data
                     .property_array(DC, "subject")
                     .map(|s| s.value.encode_utf16().chain(Some(0)).collect())
@@ -100,15 +103,15 @@ impl IPropertyStore_Impl for PropertyHandler_Impl {
         let tag_tuple = self.tags.borrow();
 
         let orig_attempt = unsafe { ps.GetAt(iprop, pkey) };
-        if orig_attempt.is_err() {
-            if let Some(tags) = &tag_tuple.as_ref() {
-                unsafe {
+        unsafe {
+            if orig_attempt.is_err() || (*pkey).pid == 0 {
+                if let Some(tags) = &tag_tuple.as_ref() {
                     *pkey = PROPERTYKEY {
                         fmtid: PSGUID_SUMMARYINFORMATION,
                         pid: 5 as u32,
-                    }
-                };
-                return Ok(());
+                    };
+                    return Ok(());
+                }
             }
         }
 
