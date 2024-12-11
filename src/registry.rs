@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::io::Result;
 
-use crate::dll::{DEFAULT_CLSID, JXL_CLSID, MPEG_4_CLSID};
+use crate::dll::*;
 
 use windows::core::GUID;
 
@@ -37,9 +37,8 @@ fn register_clsid_base(module_path: &str, clsid: &windows::core::GUID) -> std::i
 
 pub fn register(module_path: &str) -> Result<()> {
     let clsid_map = HashMap::from([
-        (&DEFAULT_CLSID, vec![".png", ".gif", ".webp"]),
-        (&MPEG_4_CLSID, vec![".mp4"]),
-        (&JXL_CLSID, vec![".jxl"]),
+        (&MY_DEFAULT_CLSID, vec![".png", ".gif", ".webp"]),
+        (&MY_JXL_CLSID, vec![".jxl"]),
     ]);
 
     let hkcr = RegKey::predef(HKEY_CLASSES_ROOT);
@@ -87,5 +86,44 @@ pub fn register(module_path: &str) -> Result<()> {
 }
 
 pub fn unregister() -> Result<()> {
+    let clsid_map = HashMap::from([
+        (GUID::from_u128(DEFAULT_CLSID), vec![".png", ".gif", ".webp"]),
+        (GUID::from_u128(JXL_CLSID), vec![".jxl"]),
+    ]);
+    
+    let hkcr = RegKey::predef(HKEY_CLASSES_ROOT);
+    let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
+
+    let handlers_key = hklm.open_subkey(PROPERTY_HANDLERS_KEY)?;
+    
+    for (clsid, ext_vec) in &clsid_map {
+        for ext in ext_vec {
+            hkcr.delete_subkey_all(format!(
+                "CLSID\\{}",
+                &guid_to_string(&clsid)
+            ))
+            .ok();
+
+            let (handler_key, _) = handlers_key.create_subkey_with_flags(ext, KEY_WRITE)?;
+            handler_key.set_value("", &guid_to_string(&clsid))?;
+            
+            let (system_ext_key, _) =
+                hkcr.create_subkey(format!("SystemFileAssociations\\{}", ext))?;
+            
+            let old_full_details_present: Result<String> = system_ext_key.get_value("OldFullDetails");
+            if !old_full_details_present.is_err() {
+                let old_full_details = old_full_details_present?;
+                system_ext_key.set_value("FullDetails", &old_full_details)?;
+                system_ext_key.delete_subkey("OldFullDetails")?;
+            }
+            
+            let old_preview_details_present: Result<String> = system_ext_key.get_value("OldPreviewDetails");
+            if !old_preview_details_present.is_err() {
+                let old_preview_details = old_preview_details_present?;
+                system_ext_key.set_value("PreviewDetails", &old_preview_details)?;
+                system_ext_key.delete_subkey("OldPreviewDetails")?;
+            }
+        }
+    }
     Ok(())
 }
