@@ -3,6 +3,7 @@ use std::fs;
 //use std::path::Path;
 
 use crate::properties::PropertyHandler;
+use crate::registry::unregister;
 
 use windows::{
     core::*,
