@@ -20,8 +20,8 @@ use windows::Win32::{
 pub const DEFAULT_CLSID: u128 = 0xA38B883C_1682_497E_97B0_0A3A9E801682;
 pub const JXL_CLSID: u128 = 0x95FFE0F8_AB15_4751_A2F3_CFAFDBF13664;
 
-pub const MY_DEFAULT_CLSID: GUID = GUID::from_u128(0x33c20ecf_3e11_42c6_9285_af2dc3cb40d8);
-pub const MY_JXL_CLSID: GUID = GUID::from_u128(0xee305c51_c1dd_4121_466a_117d67574bba);
+pub const MY_DEFAULT_CLSID: GUID = GUID::from_u128(0x33C20ECF_3E11_42C6_9285_AF2DC3CB40D8);
+pub const MY_JXL_CLSID: GUID = GUID::from_u128(0xEE305C51_C1DD_4121_466A_117D67574BBA);
 
 static mut DLL_INSTANCE: HINSTANCE = HINSTANCE(std::ptr::null_mut());
 
@@ -140,7 +140,7 @@ pub unsafe extern "system" fn DllGetClassObject(
     let ext = match *rclsid {
         MY_DEFAULT_CLSID => DEFAULT_CLSID,
         MY_JXL_CLSID => JXL_CLSID,
-        _ => 0xA38B883C_1682_497E_97B0_0A3A9E801682,
+        _ => DEFAULT_CLSID,
     };
 
     let factory = ClassFactory(ext.to_owned());

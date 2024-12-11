@@ -1,19 +1,20 @@
 #[cfg(test)]
 use std::fs;
-use std::path::Path;
+//use std::path::Path;
 
-use crate::{dll::ClassFactory, properties::PropertyHandler};
+use crate::properties::PropertyHandler;
 
 use windows::{
     core::*,
     Win32::{
-        System::Com::{StructuredStorage::InitPropVariantFromStringVector, *},
+        //System::Com::StructuredStorage::InitPropVariantFromStringVector,
         UI::Shell::{PropertiesSystem::*, PSGUID_SUMMARYINFORMATION},
     },
 };
 
-use xmp_toolkit::{xmp_ns::DC, XmpMeta};
+//use xmp_toolkit::{xmp_ns::DC, XmpMeta};
 
+/*
 //#[test]
 #[allow(non_snake_case, unused_variables)]
 fn xmp_test() -> Result<()> {
@@ -43,6 +44,7 @@ fn xmp_test() -> Result<()> {
 
     Ok(())
 }
+*/
 
 #[test]
 #[allow(non_snake_case, unused_variables)]
@@ -56,8 +58,6 @@ fn main_test() -> Result<()> {
 
         let ext = match entry.extension().unwrap().to_str().unwrap() {
             "jxl" => 0x95FFE0F8_AB15_4751_A2F3_CFAFDBF13664 as u128,
-            "webm" => 0xC591F150_4106_4141_B5C1_30B2101453BD as u128,
-            "mp4" => 0xf81b1b56_7613_4ee4_bc05_1fab5de5c07e as u128,
             _ => 0xA38B883C_1682_497E_97B0_0A3A9E801682 as u128,
         };
 
@@ -94,11 +94,13 @@ fn process(img_path: &str, ext: u128) -> Result<()> {
             //println!("GetAt - {:?}", pk);
 
             let val = store.GetValue(&pk as *const PROPERTYKEY);
-            if pk.fmtid == PSGUID_SUMMARYINFORMATION {
+            if pk.fmtid == PSGUID_SUMMARYINFORMATION && pk.pid == 5 {
                 println!("GetAt index - {:?}\n", p);
-                println!("GetValue - {:?}\n", val);
+                println!("GetValue - {:?}", val);
             }
         }
+
+        println!("");
     }
 
     /*
