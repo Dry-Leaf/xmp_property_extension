@@ -10,8 +10,7 @@ use windows::Win32::{
     Foundation::*,
     System::{
         Com::{IClassFactory, IClassFactory_Impl},
-        LibraryLoader::DisableThreadLibraryCalls,
-        LibraryLoader::GetModuleFileNameW,
+        LibraryLoader::{DisableThreadLibraryCalls, GetModuleFileNameW},
         SystemServices::DLL_PROCESS_ATTACH,
     },
     UI::Shell::PropertiesSystem::*,
