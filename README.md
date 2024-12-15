@@ -1,7 +1,7 @@
 A Windows property handler that allows reading data embedded in PNG and GIF files, and interpreting them as tags
 in the same way natively supported by JPEG. 
 
-Intended to be used in conjunction with [this utility](https://gitgud.io/nvtelen/tag-injector), which pulls 
+Intended to be used in conjunction with [this utility](https://github.com/Dry-Lead/tag-injector), which pulls
 tag information from image boorus and inserts them into files.
 
 Also works with the JXL property handler and thumbnailer implemented 

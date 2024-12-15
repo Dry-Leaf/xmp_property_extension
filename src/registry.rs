@@ -95,10 +95,7 @@ pub fn unregister() -> Result<()> {
     let clsid_map = HashMap::from([
         (
             &MY_DEFAULT_CLSID,
-            (
-                GUID::from_u128(DEFAULT_CLSID),
-                vec![".png", ".gif", ".webp"],
-            ),
+            (GUID::from_u128(DEFAULT_CLSID), vec![".png", ".gif"]),
         ),
         (&MY_JXL_CLSID, (GUID::from_u128(JXL_CLSID), vec![".jxl"])),
     ]);
